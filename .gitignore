@@ -1,3 +1,4 @@
 gt-telegram
 *.exe
 .env
+dev-docs/
