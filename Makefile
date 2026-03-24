@@ -4,7 +4,7 @@
 BINARY_NAME := gt-telegram
 BUILD_DIR := bin
 INSTALL_DIR := $(HOME)/.local/bin
-VERSION := 0.3.0
+VERSION := 0.3.1
 
 # Default target
 help:
