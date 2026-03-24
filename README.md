@@ -143,4 +143,4 @@ Config lives at `<GT_TOWN>/mayor/telegram.json` with `0600` permissions.
 
 ## License
 
-Same license as Gas Town.
+[MIT](LICENSE)
