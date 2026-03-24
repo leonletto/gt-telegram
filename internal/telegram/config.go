@@ -22,14 +22,23 @@ type Config struct {
 	RateLimit int      `json:"rate_limit,omitempty"`
 }
 
-// Validate checks that the config is well-formed.
-// It returns an error if any required field is missing or invalid.
-func (c *Config) Validate() error {
+// ValidateToken checks that the token is present and well-formed.
+// Use this for pre-pairing validation where chat_id may not yet be set.
+func (c *Config) ValidateToken() error {
 	if c.Token == "" {
 		return fmt.Errorf("telegram config: token is required")
 	}
 	if !tokenPattern.MatchString(c.Token) {
 		return fmt.Errorf("telegram config: token format invalid (must match \\d+:[A-Za-z0-9_-]+)")
+	}
+	return nil
+}
+
+// Validate checks that the config is fully ready for running the bridge.
+// It returns an error if any required field is missing or invalid.
+func (c *Config) Validate() error {
+	if err := c.ValidateToken(); err != nil {
+		return err
 	}
 	if c.ChatID == 0 {
 		return fmt.Errorf("telegram config: chat_id is required")

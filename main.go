@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	telegram "github.com/leonletto/gt-telegram/internal/telegram"
 )
@@ -27,7 +28,8 @@ Usage:
   gt-telegram <command> [flags]
 
 Commands:
-  configure   Configure the Telegram bridge
+  configure   Configure the Telegram bridge (auto-pairs if --allow-from not set)
+  pair        Pair your Telegram account with the bridge
   status      Show bridge configuration status
   run         Run the bridge in the foreground
   version     Show version information
@@ -49,6 +51,8 @@ func main() {
 	switch cmd {
 	case "configure":
 		err = runConfigure()
+	case "pair":
+		err = runPair()
 	case "status":
 		err = runStatus()
 	case "run":
@@ -92,6 +96,8 @@ func runConfigure() error {
 	allowFromStr := fs.String("allow-from", "", "Allowed sender user IDs (comma-separated)")
 	notifyStr := fs.String("notify", "", "Notification categories (comma-separated)")
 	yes := fs.Bool("yes", false, "Skip confirmation prompts")
+	skipPair := fs.Bool("skip-pair", false, "Write config only, don't auto-pair")
+	pairTimeout := fs.Duration("pair-timeout", 60*time.Second, "How long to wait for a pairing message")
 	fs.Parse(os.Args[1:]) //nolint:errcheck
 
 	root := townRoot()
@@ -137,8 +143,25 @@ func runConfigure() error {
 	cfg.Enabled = true
 	cfg.ApplyDefaults()
 
-	if err := cfg.Validate(); err != nil {
-		return fmt.Errorf("invalid config: %w", err)
+	// Determine which validation to use based on whether pairing will happen.
+	hasAllowFrom := len(cfg.AllowFrom) > 0
+	hasChatID := cfg.ChatID != 0
+
+	if hasAllowFrom && !hasChatID {
+		// Personal chats: chat_id == user_id
+		cfg.ChatID = cfg.AllowFrom[0]
+	}
+
+	if hasAllowFrom && hasChatID {
+		// Full config provided — validate everything
+		if err := cfg.Validate(); err != nil {
+			return fmt.Errorf("invalid config: %w", err)
+		}
+	} else {
+		// Token-only validation (chat_id/allow_from will come from pairing)
+		if err := cfg.ValidateToken(); err != nil {
+			return fmt.Errorf("invalid config: %w", err)
+		}
 	}
 
 	if err := telegram.SaveConfig(configPath, cfg); err != nil {
@@ -146,11 +169,28 @@ func runConfigure() error {
 	}
 
 	fmt.Printf("Telegram bridge configured (%s).\n", configPath)
+
+	// Path 1: allow_from provided — no pairing needed
+	if hasAllowFrom {
+		fmt.Println()
+		fmt.Println("Next steps:")
+		fmt.Println("  gt-telegram status    # verify configuration")
+		fmt.Println("  gt-telegram run       # start the bridge")
+		return nil
+	}
+
+	// Path 2: skip pairing
+	if *skipPair {
+		fmt.Println()
+		fmt.Println("Next steps:")
+		fmt.Println("  gt-telegram pair      # pair your Telegram account")
+		fmt.Println("  gt-telegram run       # start the bridge")
+		return nil
+	}
+
+	// Path 3: auto-pair
 	fmt.Println()
-	fmt.Println("Next steps:")
-	fmt.Println("  gt-telegram status    # verify configuration")
-	fmt.Println("  gt-telegram run       # start the bridge")
-	return nil
+	return doPair(cfg.Token, configPath, *pairTimeout, *yes)
 }
 
 func parseIntList(s string) ([]int64, error) {
@@ -168,6 +208,84 @@ func parseIntList(s string) ([]int64, error) {
 		ids = append(ids, id)
 	}
 	return ids, nil
+}
+
+// --- pair ---
+
+func runPair() error {
+	fs := flag.NewFlagSet("pair", flag.ExitOnError)
+	pairTimeout := fs.Duration("pair-timeout", 60*time.Second, "How long to wait for a pairing message")
+	yes := fs.Bool("yes", false, "Auto-accept the first sender without prompting")
+	fs.Parse(os.Args[1:]) //nolint:errcheck
+
+	root := townRoot()
+	configPath := telegram.ConfigPath(root)
+	cfg, err := telegram.LoadConfig(configPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("telegram bridge is not configured — run 'gt-telegram configure' first")
+		}
+		return fmt.Errorf("loading config: %w", err)
+	}
+
+	if cfg.Token == "" {
+		return fmt.Errorf("telegram token not set — run 'gt-telegram configure --token <TOKEN>' first")
+	}
+
+	return doPair(cfg.Token, configPath, *pairTimeout, *yes)
+}
+
+// doPair runs the interactive pairing flow: connects to Telegram, waits for
+// a message, confirms the sender, and writes allow_from + chat_id to config.
+func doPair(token, configPath string, pairTimeout time.Duration, autoAccept bool) error {
+	if pairTimeout > 5*time.Minute {
+		pairTimeout = 5 * time.Minute
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
+	go func() {
+		<-sigCh
+		signal.Reset(syscall.SIGTERM, syscall.SIGINT)
+		cancel()
+	}()
+
+	fmt.Printf("Pairing — send any message to your bot from Telegram (timeout: %s)...\n", pairTimeout)
+
+	result, err := telegram.Pair(ctx, token, pairTimeout)
+	if err != nil {
+		return fmt.Errorf("pairing failed: %w", err)
+	}
+
+	fmt.Printf("\nMessage from: %s (ID: %d)\n", result.DisplayName(), result.UserID)
+
+	if !autoAccept {
+		fmt.Print("  Allow this user? [y/n]: ")
+		var answer string
+		fmt.Scanln(&answer) //nolint:errcheck
+		if answer != "y" && answer != "Y" {
+			fmt.Println("Pairing skipped. Run 'gt-telegram pair' to retry.")
+			return nil
+		}
+	}
+
+	// Load config, set allow_from + chat_id, save
+	cfg, err := telegram.LoadConfig(configPath)
+	if err != nil {
+		return fmt.Errorf("loading config: %w", err)
+	}
+	cfg.AllowFrom = []int64{result.UserID}
+	cfg.ChatID = result.ChatID
+	if err := telegram.SaveConfig(configPath, cfg); err != nil {
+		return fmt.Errorf("saving config: %w", err)
+	}
+
+	fmt.Printf("\nPaired! chat_id=%d, allow_from=[%d]\n", result.ChatID, result.UserID)
+	fmt.Println("  Bridge is ready — run 'gt-telegram run' to start.")
+	return nil
 }
 
 // --- status ---

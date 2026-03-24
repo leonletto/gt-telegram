@@ -43,6 +43,20 @@ func TestConfig_InvalidTokenFormatFails(t *testing.T) {
 	}
 }
 
+func TestConfig_ValidateToken_PassesWithoutChatID(t *testing.T) {
+	cfg := Config{
+		Token: "123456789:ABCDEFabcdef",
+	}
+	assert.NoError(t, cfg.ValidateToken())
+}
+
+func TestConfig_ValidateToken_FailsWithoutToken(t *testing.T) {
+	cfg := Config{}
+	err := cfg.ValidateToken()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "token")
+}
+
 func TestConfig_MissingChatIDFails(t *testing.T) {
 	cfg := Config{
 		Token: "123456789:ABCDEFabcdef",

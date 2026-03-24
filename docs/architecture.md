@@ -121,6 +121,54 @@ Two implementations:
 - **DirectSender** — calls injected Go functions directly. Available for
   library usage if someone wants to embed the bridge in another Go program.
 
+## Pairing
+
+The `pair` subcommand provides interactive account pairing so users don't need
+to manually look up their Telegram user ID or chat ID.
+
+### Flow
+
+```
+gt-telegram configure --token 123:AAH...
+  → saves token to config
+  → connects to Telegram Bot API
+  → "Pairing — send any message to your bot from Telegram (timeout: 60s)..."
+  → captures first non-bot message
+  → "Message from: Leon Letto (ID: 7747509251)"
+  → "Allow this user? [y/n]: y"
+  → writes allow_from + chat_id to config
+```
+
+The `pair` subcommand can also be run separately on an already-configured
+bridge (`gt-telegram pair`).
+
+### Security Model
+
+**Window exposure:** During pairing, any Telegram user who knows the bot's
+username can send a message and be presented for approval. This is acceptable
+because:
+
+- The window is short (default 60s, max 5 minutes enforced in code)
+- The user must explicitly confirm the sender (`[y/n]` prompt)
+- The probe message is never relayed to Gas Town
+- Only non-bot messages are accepted
+
+**Fail-closed:** If pairing fails, times out, or is declined, no config changes
+are made. The `allow_from` list stays empty, which blocks all users.
+
+**`--yes` flag risk:** When `--yes` is used, the first Telegram sender is
+auto-accepted without visual confirmation. If a bot scan hits the Telegram bot
+before the legitimate user, the scanner's ID is whitelisted. Use `--yes` only
+in automated testing or trusted environments.
+
+| Safeguard | Implementation |
+|-----------|---------------|
+| Short window | Default 60s timeout, max 300s cap |
+| Explicit consent | `[y/n]` prompt required (unless `--yes`) |
+| No relay | Pairing message consumed, never forwarded to Gas Town |
+| Fail-closed | If pairing fails or is declined, `allow_from` stays empty = block all |
+| Bots rejected | `msg.From.IsBot` check before accepting pairing message |
+
 ## Security
 
 | Concern | Mitigation |
@@ -130,6 +178,7 @@ Two implementations:
 | Bot messages | Always rejected (`is_bot` check before allow-list) |
 | Rate limiting | Per-user sliding window, configurable (default 30/min) |
 | Outbound | Only sends to configured `chat_id` |
+| Pairing | Short window (60s default), explicit consent, no relay, fail-closed |
 
 ## Error Handling
 
