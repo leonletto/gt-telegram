@@ -15,6 +15,12 @@ import (
 	telegram "github.com/leonletto/gt-telegram/internal/telegram"
 )
 
+// Version and Build are set by ldflags at build time.
+var (
+	Version = "dev"
+	Build   = "unknown"
+)
+
 const usage = `gt-telegram — Telegram bridge for Gas Town overseer communication
 
 Usage:
@@ -24,6 +30,7 @@ Commands:
   configure   Configure the Telegram bridge
   status      Show bridge configuration status
   run         Run the bridge in the foreground
+  version     Show version information
 
 Environment:
   GT_TOWN     Gas Town root directory (default: current directory)
@@ -46,6 +53,9 @@ func main() {
 		err = runStatus()
 	case "run":
 		err = runBridge()
+	case "version", "-v", "--version":
+		fmt.Printf("gt-telegram %s (build %s)\n", Version, Build)
+		return
 	case "-h", "--help", "help":
 		fmt.Print(usage)
 		return

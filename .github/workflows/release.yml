@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # Only run in the canonical repo, not forks
+    if: ${{ github.repository == 'leonletto/gt-telegram' }}
+    # macOS runner required for Apple codesigning and notarization
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Import Apple Developer Certificate
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          # Create a temporary keychain for CI
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 32)"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Decode and import the .p12 certificate
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign
+          rm "$RUNNER_TEMP/certificate.p12"
+
+          # Allow codesign to access the keychain without prompting
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Add temporary keychain to the search list
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+
+          # Verify the identity is available
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+      - name: Notarize macOS binaries
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          # Find and notarize each signed darwin binary (with retries)
+          for bin in dist/gt-telegram_darwin_*/gt-telegram; do
+            echo "Notarizing $bin..."
+
+            zip_path="${bin}.zip"
+            ditto -c -k "$bin" "$zip_path"
+
+            # Retry up to 3 times with 15s backoff for transient network errors
+            for attempt in 1 2 3; do
+              echo "  Attempt $attempt/3..."
+              if xcrun notarytool submit "$zip_path" \
+                --apple-id "$APPLE_ID" \
+                --team-id "$APPLE_TEAM_ID" \
+                --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+                --wait; then
+                echo "Notarization complete for $bin"
+                break
+              fi
+              if [ "$attempt" -lt 3 ]; then
+                echo "  Retrying in $((attempt * 15))s..."
+                sleep $((attempt * 15))
+              else
+                echo "  Notarization failed after 3 attempts for $bin"
+                exit 1
+              fi
+            done
+
+            rm "$zip_path"
+          done
+
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH"
+          fi

@@ -24,7 +24,7 @@ func (m *mockBotSender) SendMessage(text string, replyToMsgID *int) (int, error)
 }
 
 type mockInboxReader struct {
-	messages []InboxMessage
+	messages   []InboxMessage
 	markedRead []string
 }
 

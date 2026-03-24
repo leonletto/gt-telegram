@@ -1,0 +1,64 @@
+version: 2
+
+builds:
+  - id: gt-telegram
+    binary: gt-telegram
+    main: .
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X main.Version={{ .Version }}
+      - -X main.Build={{ .ShortCommit }}
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    hooks:
+      post:
+        # Codesign macOS binaries with Developer ID certificate (hardened runtime required for notarization)
+        - cmd: 'bash -c ''[ "{{ .Os }}" = "darwin" ] && codesign --force --sign "Developer ID Application: Leon Letto (XW56K59R9K)" --options runtime --timestamp "{{ .Path }}" || true'''
+
+archives:
+  - id: gt-telegram
+    formats:
+      - tar.gz
+    name_template: "gt-telegram_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE*
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: leonletto
+    name: gt-telegram
+
+homebrew_casks:
+  - repository:
+      owner: leonletto
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Casks
+    homepage: "https://github.com/leonletto/gt-telegram"
+    description: "Telegram bridge for Gas Town overseer communication"
+    license: "MIT"
+    commit_author:
+      name: goreleaser
+      email: goreleaser@leonletto.github.io

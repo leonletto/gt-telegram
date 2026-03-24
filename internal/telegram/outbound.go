@@ -142,10 +142,10 @@ func InodeChanged(a, b os.FileInfo) bool {
 
 // OutboundNotifier tails a feed file and sends matching events to Telegram.
 type OutboundNotifier struct {
-	feedPath   string
-	filter     *CategoryFilter
-	bot        BotSender
-	msgMap     *MessageMap
+	feedPath     string
+	filter       *CategoryFilter
+	bot          BotSender
+	msgMap       *MessageMap
 	pollInterval time.Duration
 }
 

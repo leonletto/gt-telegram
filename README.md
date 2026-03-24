@@ -4,7 +4,20 @@ Telegram bridge for [Gas Town](https://github.com/steveyegge/gastown) overseer
 communication. Chat with the Mayor agent and receive workspace notifications
 from any Telegram client.
 
+[![License](https://img.shields.io/github/license/leonletto/gt-telegram)](LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/leonletto/gt-telegram)](https://goreportcard.com/report/github.com/leonletto/gt-telegram)
+[![CI](https://github.com/leonletto/gt-telegram/actions/workflows/ci.yml/badge.svg)](https://github.com/leonletto/gt-telegram/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/leonletto/gt-telegram)](https://github.com/leonletto/gt-telegram/releases)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/leonletto/gt-telegram)](go.mod)
+
 ## Install
+
+```bash
+# One-line installer (recommended — downloads signed binary with checksum verification)
+curl -fsSL https://raw.githubusercontent.com/leonletto/gt-telegram/main/scripts/install.sh | sh
+```
+
+Or with Go:
 
 ```bash
 go install github.com/leonletto/gt-telegram@latest
@@ -15,7 +28,7 @@ Or build from source:
 ```bash
 git clone https://github.com/leonletto/gt-telegram
 cd gt-telegram
-go build -o gt-telegram .
+make install
 ```
 
 ## Quick Start
