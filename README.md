@@ -10,6 +10,8 @@ from any Telegram client.
 [![Release](https://img.shields.io/github/v/release/leonletto/gt-telegram)](https://github.com/leonletto/gt-telegram/releases)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/leonletto/gt-telegram)](go.mod)
 
+[![Demo](https://img.youtube.com/vi/1WmGka_8fE8/maxresdefault.jpg)](https://youtu.be/1WmGka_8fE8)
+
 ## Install
 
 ```bash
