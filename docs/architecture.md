@@ -134,7 +134,7 @@ gt-telegram configure --token 123:AAH...
   → connects to Telegram Bot API
   → "Pairing — send any message to your bot from Telegram (timeout: 60s)..."
   → captures first non-bot message
-  → "Message from: Leon Letto (ID: 7747509251)"
+  → "Message from: Your Name (ID: 123456789)"
   → "Allow this user? [y/n]: y"
   → writes allow_from + chat_id to config
 ```

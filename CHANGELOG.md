@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-24
+
+### Added
+
+- **Interactive pairing flow** — `gt-telegram configure --token <TOKEN>` now
+  auto-pairs by connecting to Telegram and capturing your user ID and chat ID
+  from the first message you send. No manual ID lookup needed.
+- **`pair` subcommand** — pair your Telegram account with an already-configured
+  bridge (`gt-telegram pair`)
+- **Pairing security model** — short window (60s default, 300s max), explicit
+  `[y/n]` consent, probe message never relayed to Gas Town, fail-closed on
+  timeout or decline
+
+### Changed
+
+- `configure` now auto-pairs when `--allow-from` is not provided. Use
+  `--skip-pair` to save config without pairing, or `--allow-from <ID>` to
+  skip pairing entirely.
+- Split `Config.Validate()` into `ValidateToken()` (pre-pairing) and
+  `Validate()` (full validation for running the bridge)
+
 ## [0.2.0] - 2026-03-23
 
 ### Added
@@ -34,5 +55,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Inbound bead cleanup goroutine
 - Setup guide, architecture doc, and troubleshooting guide
 
+[0.3.0]: https://github.com/leonletto/gt-telegram/releases/tag/v0.3.0
 [0.2.0]: https://github.com/leonletto/gt-telegram/releases/tag/v0.2.0
 [0.1.0]: https://github.com/leonletto/gt-telegram/releases/tag/v0.1.0

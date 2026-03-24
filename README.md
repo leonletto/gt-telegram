@@ -43,29 +43,37 @@ make install
 
 ```bash
 # 1. Create a bot via @BotFather on Telegram, copy the token
-# 2. Send /start to your bot, then get your chat ID:
-#    curl https://api.telegram.org/bot<TOKEN>/getUpdates
-#    → result[0].message.chat.id
 
-# 3. Configure (from your Gas Town root, or set GT_TOWN)
+# 2. Configure and pair (from your Gas Town root, or set GT_TOWN)
 export GT_TOWN=~/gt
-gt-telegram configure \
-    --token "123456789:AAH..." \
-    --chat-id <CHAT_ID> \
-    --allow-from <USER_ID>
+gt-telegram configure --token "123456789:AAH..."
+# → Send any message to your bot from Telegram
+# → Confirm the sender: [y/n]
+# → Done! chat_id and allow_from are set automatically
 
-# 4. Run the bridge
+# 3. Run the bridge
 gt-telegram run
+```
+
+No need to manually look up your chat ID or user ID — the pairing flow
+captures them automatically from your first message.
+
+If you already know your IDs, you can skip pairing:
+
+```bash
+gt-telegram configure --token "123456789:AAH..." --chat-id <ID> --allow-from <ID>
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `gt-telegram configure` | Set token, chat ID, allow list, notifications |
+| `gt-telegram configure` | Set token and pair (auto-pairs unless `--allow-from` set) |
+| `gt-telegram pair` | Pair your Telegram account with an already-configured bridge |
 | `gt-telegram status` | Show bridge configuration (token masked) |
 | `gt-telegram status --json` | Machine-readable status |
 | `gt-telegram run` | Run bridge in foreground (Ctrl-C to stop) |
+| `gt-telegram version` | Show version and build info |
 
 ## How It Works
 

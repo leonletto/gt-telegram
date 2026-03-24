@@ -18,33 +18,25 @@ Complete walkthrough for setting up the Telegram bridge with Gas Town.
 
 The token looks like: `123456789:ABCDefGHIjklMNOpqrsTUVwxyz`
 
-## Step 2: Get Your Chat ID
-
-1. Open Telegram and send `/start` to your new bot
-2. Send any message (e.g., "hello")
-3. In a terminal, run:
+## Step 2: Install gt-telegram
 
 ```bash
-curl -s "https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates" | python3 -m json.tool
-```
+# Option A: one-line installer (recommended — signed binary with checksum verification)
+curl -fsSL https://raw.githubusercontent.com/leonletto/gt-telegram/main/scripts/install.sh | sh
 
-4. Find `result[0].message.chat.id` — that's your **chat ID**
-5. Also note `result[0].message.from.id` — that's your **user ID** (usually the same as chat ID for private chats)
+# Option B: Homebrew
+brew install leonletto/tap/gt-telegram
 
-## Step 3: Install gt-telegram
-
-```bash
-# Option A: go install
+# Option C: go install
 go install github.com/leonletto/gt-telegram@latest
 
-# Option B: build from source
+# Option D: build from source
 git clone https://github.com/leonletto/gt-telegram
 cd gt-telegram
-go build -o gt-telegram .
-cp gt-telegram ~/.local/bin/  # or wherever you keep binaries
+make install
 ```
 
-## Step 4: Configure the Bridge
+## Step 3: Configure and Pair
 
 Set `GT_TOWN` to your Gas Town root directory:
 
@@ -52,7 +44,32 @@ Set `GT_TOWN` to your Gas Town root directory:
 export GT_TOWN=~/gt  # add to .bashrc/.zshrc for persistence
 ```
 
-Run the configure command:
+Run configure with your bot token:
+
+```bash
+gt-telegram configure --token "<YOUR_BOT_TOKEN>"
+```
+
+This saves the token and starts an interactive pairing flow:
+
+```
+Telegram bridge configured (/home/user/gt/mayor/telegram.json).
+
+Pairing — send any message to your bot from Telegram (timeout: 60s)...
+
+Message from: Your Name (ID: 123456789)
+  Allow this user? [y/n]: y
+
+Paired! chat_id=123456789, allow_from=[123456789]
+  Bridge is ready — run 'gt-telegram run' to start.
+```
+
+The pairing flow automatically captures your chat ID and user ID from the
+first message you send to the bot. No manual ID lookup needed.
+
+### Alternative: Skip Pairing
+
+If you already know your IDs (e.g., from another bot), you can skip pairing:
 
 ```bash
 gt-telegram configure \
@@ -61,7 +78,12 @@ gt-telegram configure \
     --allow-from <YOUR_USER_ID>
 ```
 
-This creates `$GT_TOWN/mayor/telegram.json` with `0600` permissions.
+Or save the token now and pair later:
+
+```bash
+gt-telegram configure --token "<YOUR_BOT_TOKEN>" --skip-pair
+gt-telegram pair  # run this when you're ready
+```
 
 ### Optional: Configure Notifications
 
@@ -79,7 +101,7 @@ gt-telegram status
 
 Should show your config with the token masked.
 
-## Step 5: Run the Bridge
+## Step 4: Run the Bridge
 
 ```bash
 gt-telegram run
@@ -124,7 +146,7 @@ systemctl --user daemon-reload
 systemctl --user enable --now gt-telegram
 ```
 
-## Step 6: Test
+## Step 5: Test
 
 1. Send a message to your bot on Telegram
 2. The bridge relays it as mail to the Mayor
