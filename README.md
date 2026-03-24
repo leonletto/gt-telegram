@@ -117,9 +117,28 @@ Config lives at `<GT_TOWN>/mayor/telegram.json` with `0600` permissions.
 | `GT_TOWN` | Gas Town root directory (default: cwd) |
 | `GT_TOWN_ROOT` | Alias for GT_TOWN |
 
+## Configuration Reference
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `token` | string | required | BotFather bot token |
+| `chat_id` | int64 | required | Telegram chat for outbound messages |
+| `allow_from` | []int64 | `[]` | Allowed user IDs (fail-closed) |
+| `target` | string | `"mayor/"` | Mail recipient for inbound messages |
+| `enabled` | bool | `true` | Enable/disable the bridge |
+| `notify` | []string | `["escalations"]` | Notification categories |
+| `rate_limit` | int | `30` | Max inbound messages per user per minute |
+
+## Documentation
+
+- [Setup Guide](docs/setup.md) — step-by-step walkthrough from bot creation to running
+- [Architecture](docs/architecture.md) — component design, package structure, security model
+- [Troubleshooting](docs/troubleshooting.md) — common issues and solutions
+
 ## Requirements
 
-- A running Gas Town instance with `gt` and `bd` on PATH
+- A running [Gas Town](https://github.com/steveyegge/gastown) instance
+- `gt` and `bd` commands on PATH
 - A Telegram bot token (from [@BotFather](https://t.me/BotFather))
 
 ## License
