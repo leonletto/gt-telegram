@@ -17,6 +17,12 @@ from any Telegram client.
 curl -fsSL https://raw.githubusercontent.com/leonletto/gt-telegram/main/scripts/install.sh | sh
 ```
 
+Or with Homebrew:
+
+```bash
+brew install leonletto/tap/gt-telegram
+```
+
 Or with Go:
 
 ```bash
