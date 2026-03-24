@@ -12,6 +12,8 @@ from any Telegram client.
 
 [![Demo](https://img.youtube.com/vi/1WmGka_8fE8/maxresdefault.jpg)](https://youtu.be/1WmGka_8fE8?si=SMbAjFDpoTsbHfm2&t=73)
 
+*A dedicated gt-telegram demo video is coming soon.*
+
 ## Install
 
 ```bash
