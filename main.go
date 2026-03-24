@@ -284,7 +284,10 @@ func doPair(token, configPath string, pairTimeout time.Duration, autoAccept bool
 	}
 
 	fmt.Printf("\nPaired! chat_id=%d, allow_from=[%d]\n", result.ChatID, result.UserID)
-	fmt.Println("  Bridge is ready — run 'gt-telegram run' to start.")
+	fmt.Println()
+	fmt.Println("Next steps:")
+	fmt.Println("  gt-telegram run                                    # run in foreground (see logs)")
+	fmt.Println("  tmux new-session -d -s telegram 'gt-telegram run'  # run as background daemon")
 	return nil
 }
 
